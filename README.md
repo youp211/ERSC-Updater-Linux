@@ -1,4 +1,4 @@
-** To set the script as executable: **
+To set the script as executable:
 
 
 ** Terminal Emulator **
