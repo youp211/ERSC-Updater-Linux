@@ -1,4 +1,20 @@
-WIP
+**
+To set the script as executable:
+
+If you're using a terminal emulator, use chmod +x ./ersc-update.sh from the folder you have downloaded the script to.
+
+Note: The exact steps and terminology may vary slightly depending on your specific desktop environment (e.g., GNOME, KDE, MATE).
+
+Example (GNOME):
+
+Open the "Files" app.
+Navigate to the script's location.
+Right-click on the script and select "Properties."
+Go to the "Permissions" tab.
+Check the "Allow executing file as a program" box.
+Click "Close."
+**
+
 
 You do not need to run the script as root unless you have changed permissions on your TMP directory or your home directory. Try to run the script as non root first as a best practice.
 
