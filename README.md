@@ -1,3 +1,5 @@
+Elden Ring Seamless CO-OP Linux Installer and Updater
+
 To set the script as executable:
 
 
