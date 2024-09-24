@@ -144,3 +144,4 @@ echo "Cleaning up..."
 rm -f /tmp/ersc.zip
 echo "Clean up Complete."
 fi
+echo "Installation complete!"
