@@ -5,6 +5,12 @@
 #Cleanup
 #Sript was written very adhoc. I will improve it over time. I originally wrote this for a friend. A lot of people may find this useful... :)
 
+#at users request. :)
+if [[ $EUID -eq 0 ]]; then
+  echo "This script cannot be run as root."
+  exit 1
+fi
+
 #Functions:
 function backupExe {
 	if [ -f ./start_protected_game.exe.backup ]; then
