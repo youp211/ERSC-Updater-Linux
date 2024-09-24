@@ -9,7 +9,7 @@
 function backupExe {
 	if [ -f ./start_protected_game.exe.backup ]; then
 	echo "Vanilla game exe has already been backed up... skipping"
-	mv -v ./ersc_launcher.exe ./start_protected_game.exe
+	mv ./ersc_launcher.exe ./start_protected_game.exe
 	elif [ -f ./start_protected_game.exe ]; then
 	echo "Backing up vanilla game exe start_protected_game.exe to file start_protected_game.exe.backup"
 	mv -v ./start_protected_game.exe ./start_protected_game.exe.backup
@@ -49,7 +49,7 @@ function backupSettings {
 				case $usrOption in
 					[Yy]* ) mv -v ./SeamlessCoop/ersc_settings.ini ./ersc_settings.ini.backup; break;;
 					[Nn]* ) echo "Proceeding without ersc_settings.ini backup."; break;;
-					* ) echo "Answer y or n please.";;
+					* ) echo "Answer yes or no bro...";;
 				esac
 			done
 	fi
@@ -72,7 +72,6 @@ function restoreSettings {
 
 
 	if [ -f ./ersc_settings.ini.backup ]; then
- 		echo "Old settings exist already as backup"
 		echo "Restoring old settings..."
 		cp -v ./ersc_settings.ini.backup ./SeamlessCoop/ersc_settings.ini
 		elif [ -f ./SeamlessCoop/ersc_settings.ini ]; then
@@ -88,7 +87,7 @@ function restoreSettings {
 #Currently Tested on Flatpak and Debian, and Gentoo installations. We can add more as more people use it and submit issues. THe local installation direcotry should cover most if not all distibutions of GNU/Linux
 
 if [[ ! -d "/home/$USER/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/ELDEN\ RING/Game" && ! -d "/home/$USER/.steam/steam/steamapps/common/ELDEN RING/Game" ]]; then
-  echo "Error: One or both directories do not exist. Please submit an issue on my github page with the directory to your Elden Ring directory."
+  echo "Error: One or both directories do not exist."
   exit 1
 fi
 
