@@ -86,10 +86,10 @@ function restoreSettings {
 #Directories Check
 #Currently Tested on Flatpak and Debian, and Gentoo installations. We can add more as more people use it and submit issues. THe local installation direcotry should cover most if not all distibutions of GNU/Linux
 
-if [[ ! -d "/home/$USER/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/ELDEN\ RING/Game" || ! -d "/home/$USER/.steam/steam/steamapps/common/ELDEN RING/Game" ]]; then
-  echo "Error: One or both directories do not exist."
-  exit 1
-fi
+#if [[ ! -d "/home/$USER/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/ELDEN\ RING/Game" || ! -d "/home/$USER/.steam/steam/steamapps/common/ELDEN RING/Game" ]]; then
+#  echo "Error: One or both directories do not exist."
+#  exit 1
+#fi
 
 
 #Script Start
