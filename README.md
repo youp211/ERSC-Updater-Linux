@@ -8,6 +8,8 @@ To set the script as executable:
 
 Use chmod +x ./ersc-update.sh from the folder you have downloaded the script to.
 
+Then type ./ersc-update.sh
+
 
 ** Desktop Environment GUI **
 
@@ -27,6 +29,8 @@ Go to the "Permissions" tab.
 Check the "Allow executing file as a program" box.
 
 Click "Close."
+
+Then run the script.
 
 
 ** Other Notes **
