@@ -49,7 +49,7 @@ function backupSettings {
 				case $usrOption in
 					[Yy]* ) mv -v ./SeamlessCoop/ersc_settings.ini ./ersc_settings.ini.backup; break;;
 					[Nn]* ) echo "Proceeding without ersc_settings.ini backup."; break;;
-					* ) echo "Answer yes or no bro...";;
+					* ) echo "Answer y or n please.";;
 				esac
 			done
 	fi
@@ -87,7 +87,7 @@ function restoreSettings {
 #Currently Tested on Flatpak and Debian, and Gentoo installations. We can add more as more people use it and submit issues. THe local installation direcotry should cover most if not all distibutions of GNU/Linux
 
 if [[ ! -d "/home/$USER/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/ELDEN\ RING/Game" && ! -d "/home/$USER/.steam/steam/steamapps/common/ELDEN RING/Game" ]]; then
-  echo "Error: One or both directories do not exist."
+  echo "Error: One or both directories do not exist. Please submit an issue on my github page with the directory to your Elden Ring directory."
   exit 1
 fi
 
