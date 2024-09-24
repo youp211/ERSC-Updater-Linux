@@ -72,6 +72,7 @@ function restoreSettings {
 
 
 	if [ -f ./ersc_settings.ini.backup ]; then
+ 		echo "Old settings exist already as backup"
 		echo "Restoring old settings..."
 		cp -v ./ersc_settings.ini.backup ./SeamlessCoop/ersc_settings.ini
 		elif [ -f ./SeamlessCoop/ersc_settings.ini ]; then
