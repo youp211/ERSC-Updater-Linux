@@ -68,17 +68,26 @@ find_game_directory() {
     fi
 }
 
-# Downloads the latest 'ersc.zip' release from the GitHub repository.
+# Downloads the latest release from the GitHub repository.
 download_latest_release() {
     log_info "Finding latest Seamless Co-op release from GitHub..."
 
-    # Use a pipeline to find the download URL for the 'ersc.zip' asset.
-    # This is more robust than the original method.
     local download_url
-    download_url=$(curl --silent --fail "$REPO_API_URL" | grep "browser_download_url" | grep "ersc.zip" | cut -d '"' -f 4)
-
-    if [[ -z "$download_url" ]]; then
-        die "Could not find a download URL for 'ersc.zip'. The GitHub API response may have changed."
+    if ! download_url=$(
+        # Retrieve information on the latest mod release from the GitHub API
+        curl --silent --fail "$REPO_API_URL" |
+        # Parse the JSON API response and find the download URL
+        jq --raw-output --exit-status '
+            [
+	        .assets[] |
+	        select(
+	            .name |
+	            test("^Seamless\\.Co-op\\..*\\.zip$")
+	        )
+	    ] | first |
+	    .browser_download_url'
+    ) ; then
+        die "Could not find a download URL for 'Seamless.Co-op.*.zip'. The GitHub API response may have changed."
     fi
 
     log_info "Downloading from: $download_url"

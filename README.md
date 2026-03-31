@@ -19,9 +19,10 @@ Use chmod +x ./ersc-update.sh from the folder you have downloaded the script to.
 Then type ./ersc-update.sh
 Before running the script, ensure you have the following tools installed on your system:
 
-*   `curl`
-*   `wget`
-*   `unzip`
+* `curl`
+* `wget`
+* `unzip`
+* `jq`
 
 These are typically pre-installed on most Linux distributions.
 
@@ -97,13 +98,14 @@ Here are some common issues you might encounter and how to resolve them:
 *   **Issue:** When you try to run the script, you get an error like "Permission denied."
 *   **Solution:** You likely forgot to make the script executable. Follow the steps in the "Make the Script Executable" section above using `chmod +x`.
 
-### 2. "command not found" errors (e.g., `curl`, `wget`, `unzip`)
+### 2. "command not found" errors (e.g., `curl`, `wget`, `unzip`, `jq`)
 
-*   **Issue:** The script exits with an error indicating a command like `curl`, `wget`, or `unzip` is not found.
+*   **Issue:** The script exits with an error indicating a command like 
+    `curl`, `wget`, `unzip`, or `jq` is not found.
 *   **Solution:** These are external tools the script relies on. Ensure they are installed on your system.
-    *   **Debian/Ubuntu:** `sudo apt install curl wget unzip`
-    *   **Fedora:** `sudo dnf install curl wget unzip`
-    *   **Arch Linux:** `sudo pacman -S curl wget unzip`
+    *   **Debian/Ubuntu:** `sudo apt install curl wget unzip jq`
+    *   **Fedora:** `sudo dnf install curl wget unzip jq`
+    *   **Arch Linux:** `sudo pacman -S curl wget unzip jq`
     *   (Adjust for your specific distribution's package manager if different.)
 
 ### 3. "Could not find Elden Ring 'Game' directory"
