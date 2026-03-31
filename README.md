@@ -46,12 +46,10 @@ Navigate to the script's location.
 Right-click on the script and select "Properties."
 Open your terminal, navigate to the directory where you saved the script, and run:
 
-Go to the "Permissions" tab.
 ```bash
 chmod +x ./ersc-update.sh
 ```
 
-Check the "Allow executing file as a program" box.
 #### Via Desktop Environment (GUI)
 
 Click "Close."
