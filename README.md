@@ -7,8 +7,8 @@ This script automates the process of updating the [Elden Ring Seamless Co-op mod
 ## Features
 
 ** Terminal Emulator **
-*   **Automatic Detection:** Finds your Elden Ring installation whether it's a native Steam install or a Flatpak Steam install.
-*   **Latest Release Download:** Automatically fetches the most recent `ersc.zip` from the official GitHub repository.
+*   **Automatic Detection:** Finds your Elden Ring installation across every Steam library — native or Flatpak, including custom library folders on secondary drives (parsed from Steam's `libraryfolders.vdf`). If more than one install is found, it lets you choose.
+*   **Latest Release Download:** Automatically fetches the most recent `Seamless.Co-op.*.zip` release from the official GitHub repository.
 *   **Settings Backup:** Preserves your `ersc_settings.ini` file, prompting you if changes are detected.
 *   **Executable Management:** Backs up the original game executable and replaces it with the mod's launcher.
 *   **Clean-up:** Removes temporary download files after a successful update.
@@ -111,10 +111,8 @@ Here are some common issues you might encounter and how to resolve them:
 *   **Issue:** The script cannot locate your Elden Ring installation.
 *   **Solution:**
     *   Ensure Elden Ring is installed via Steam and that you've launched it at least once.
-    *   Verify the default paths the script checks:
-        *   `~/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/ELDEN RING/Game` (for Flatpak Steam)
-        *   `~/.steam/steam/steamapps/common/ELDEN RING/Game` (for native Steam)
-    *   If your installation is in a non-standard location (e.g., on a different drive or a custom Steam library folder), you might need to manually adjust the `find_game_directory` function in the script or consider adding a command-line argument for a custom path (an advanced modification).
+    *   The script scans every Steam data root (native `~/.steam/steam`, `~/.local/share/Steam`, and the Flatpak `~/.var/app/com.valvesoftware.Steam/...` location) and reads each one's `steamapps/libraryfolders.vdf` to discover custom library folders — including those on secondary drives. It then looks for `common/ELDEN RING/Game` in each library.
+    *   If detection still fails, confirm the game folder exists inside one of your Steam libraries and that Steam has finished installing it (launch it once from Steam).
 
 ### 4. "Download failed" or "Could not find a download URL"
 
@@ -122,7 +120,7 @@ Here are some common issues you might encounter and how to resolve them:
 *   **Solution:**
     *   Check your internet connection.
     *   The GitHub API might be temporarily unavailable or the repository structure for releases might have changed. Try running the script again after some time.
-    *   Manually visit `https://github.com/LukeYui/EldenRingSeamlessCoopRelease/releases/latest` in your browser to see if the `ersc.zip` file is present and accessible.
+    *   Manually visit `https://github.com/LukeYui/EldenRingSeamlessCoopRelease/releases/latest` in your browser to see if the `Seamless.Co-op.*.zip` file is present and accessible.
 
 ### 5. Game not launching with mod after update
 
