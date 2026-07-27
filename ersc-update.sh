@@ -177,7 +177,7 @@ download_latest_release() {
     local download_url
     if ! download_url=$(
         # Retrieve information on the latest mod release from the GitHub API
-        curl --silent --fail "$REPO_API_URL" |
+        curl --silent --fail --location "$REPO_API_URL" |
         # Parse the JSON API response and find the download URL
         jq --raw-output --exit-status '
             [
