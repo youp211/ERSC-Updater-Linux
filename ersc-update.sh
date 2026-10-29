@@ -10,7 +10,7 @@
 # backs up existing mod settings, and installs the new files.
 #
 # Author: youp211
-# Version: 2.2
+# Version: 2.3
 # ==============================================================================
 
 # --- Script Configuration ---
@@ -34,6 +34,11 @@ TEMP_ZIP_PATH=""
 # Prints a formatted informational message.
 log_info() {
     echo -e "\n[INFO] $1" >&2
+}
+
+# Prints a formatted warning message to stderr without exiting.
+log_warn() {
+    echo -e "\n[WARN] $1" >&2
 }
 
 # Prints a formatted error message to stderr and exits the script.
@@ -126,17 +131,12 @@ find_game_directory() {
        Is Steam installed and has it been launched at least once?"
     fi
 
-    # Look for the game in every library. Confirm with the app manifest when it
-    # exists (more reliable than the folder name), but accept a present Game dir
-    # even if the manifest is missing.
+    # Look for the game in every library.
     local -a found=()
-    local game manifest
+    local game
     for sa in "${libraries[@]}"; do
         game="$sa/common/ELDEN RING/Game"
-        manifest="$sa/appmanifest_${ELDEN_RING_APP_ID}.acf"
-        if [[ -d "$game" ]] && { [[ -f "$manifest" ]] || [[ -x "$game/eldenring.exe" ]] || true; }; then
-            found+=("$game")
-        fi
+        [[ -d "$game" ]] && found+=("$game")
     done
 
     if (( ${#found[@]} == 0 )); then
@@ -170,14 +170,50 @@ find_game_directory() {
     done
 }
 
+# Warns if Steam reports a pending update for Elden Ring. Each Seamless Co-op
+# release only supports one game version, so an out-of-date game will fail to
+# load the mod. Must be called from inside the game directory.
+check_game_up_to_date() {
+    # Game dir is <steamapps>/common/ELDEN RING/Game; the manifest lives in <steamapps>.
+    local manifest="../../../appmanifest_${ELDEN_RING_APP_ID}.acf"
+    [[ -f "$manifest" ]] || return 0
+
+    local state_flags
+    state_flags=$(grep -E '"StateFlags"' "$manifest" | grep -oE '[0-9]+' | head -n 1 || true)
+    [[ -n "$state_flags" ]] || return 0
+
+    # StateFlags bit 2 (value 2) is Steam's "update required" flag; a fully
+    # up-to-date install reports exactly 4.
+    if (( state_flags & 2 )); then
+        log_warn "Steam reports that Elden Ring has a pending update (StateFlags=$state_flags).
+       New Seamless Co-op releases only work with the latest game version.
+       Let Steam finish updating the game, then launch it."
+    fi
+}
+
 # Downloads the latest release from the GitHub repository.
 download_latest_release() {
     log_info "Finding latest Seamless Co-op release from GitHub..."
 
+    # Retrieve information on the latest mod release from the GitHub API.
+    local release_json
+    release_json=$(curl --silent --fail --location "$REPO_API_URL") \
+        || die "Could not reach the GitHub API. Check your internet connection and try again."
+
+    # Show which version is being installed, plus its release notes. These state
+    # which game version the mod supports (e.g. "Update to game ver 1.17").
+    local tag notes
+    tag=$(jq --raw-output '.tag_name // "unknown"' <<<"$release_json")
+    notes=$(jq --raw-output '.body // ""' <<<"$release_json" | tr -d '\r' | head -n 10)
+    log_info "Latest Seamless Co-op release: $tag"
+    if [[ -n "$notes" ]]; then
+        echo "--- Release notes ---" >&2
+        echo "$notes" >&2
+        echo "---------------------" >&2
+    fi
+
     local download_url
     if ! download_url=$(
-        # Retrieve information on the latest mod release from the GitHub API
-        curl --silent --fail --location "$REPO_API_URL" |
         # Parse the JSON API response and find the download URL
         jq --raw-output --exit-status '
             [
@@ -187,7 +223,7 @@ download_latest_release() {
 	            test("^Seamless\\.Co-op\\..*\\.zip$")
 	        )
 	    ] | first |
-	    .browser_download_url'
+	    .browser_download_url' <<<"$release_json"
     ) ; then
         die "Could not find a download URL for 'Seamless.Co-op.*.zip'. The GitHub API response may have changed."
     fi
@@ -276,12 +312,19 @@ backup_and_replace_executable() {
 
     # Decide how to preserve the vanilla executable. The key invariant: once a
     # backup of the genuine game exe exists, it must NEVER be overwritten.
-    if [[ -f "$backup_exe" ]]; then
-        # A backup already exists from a previous install/update. The current
-        # 'start_protected_game.exe' is therefore a stale mod launcher, not the
-        # vanilla exe — overwriting the backup with it would destroy the user's
-        # only local copy of the original game executable. Discard the stale
-        # launcher instead and keep the real backup intact.
+    # The mod launcher embeds the path to 'SeamlessCoop/ersc.dll'; the genuine
+    # game exe does not. This identifies launchers from any mod version.
+    if [[ -f "$backup_exe" && -f "$original_exe" ]] && ! grep -qaF "SeamlessCoop" "$original_exe"; then
+        # A backup exists, but the current exe is not the mod launcher. Steam has
+        # put the genuine game exe back (game patch or "Verify integrity of game
+        # files"), so the old backup is from an outdated game version. Refresh it.
+        log_info "'$original_exe' was restored by Steam. Refreshing '$backup_exe' with it..."
+        mv -v "$original_exe" "$backup_exe" || die "Failed to refresh executable backup."
+    elif [[ -f "$backup_exe" ]]; then
+        # A backup already exists and the current exe (if any) is the mod
+        # launcher from a previous install. Overwriting the backup with it would
+        # destroy the user's only local copy of the original game executable.
+        # Discard the old launcher instead and keep the real backup intact.
         log_info "Original executable already backed up as '$backup_exe'. Preserving it."
         rm -f "$original_exe"
     elif [[ -f "$original_exe" ]]; then
@@ -343,6 +386,8 @@ main() {
     cd "$game_dir" || die "Could not change to game directory: $game_dir"
     log_info "Operating in game directory: $(pwd)"
 
+    check_game_up_to_date
+
     download_latest_release
 
     # This must be done BEFORE unzipping, as unzip will overwrite the current settings.
@@ -359,6 +404,13 @@ main() {
     # Temp file is removed automatically by the EXIT trap (see cleanup).
 
     log_info "Update complete! You can now launch Elden Ring via Steam."
+    echo "-----------------------------------------------------"
+    echo "If the mod does not load:"
+    echo "  * Make sure Elden Ring is fully updated in Steam. Each mod release only"
+    echo "    supports the game version named in the release notes above."
+    echo "  * Clear any Elden Ring launch options left over from a manual mod install"
+    echo "    (Steam > Elden Ring > Properties > General > Launch Options)."
+    echo "  * Try a current Proton or GE-Proton version (Properties > Compatibility)."
     echo "-----------------------------------------------------"
 }
 
