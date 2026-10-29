@@ -81,7 +81,7 @@ The script will guide you through the update process with on-screen messages.
 *   **No Steam Launch Options Needed:** After running this script, you do not need to change any Steam launch options. Simply launch Elden Ring as you normally would from your Steam library, and the Seamless Co-op mod will automatically load.
 
 *   **Restoring the Original Game:** If you wish to revert to the vanilla (unmodded) Elden Ring executable, you have two options:
-    *   **Steam's "Verify Integrity of Game Files":** The easiest method is to use Steam's built-in "Verify integrity of game files..." feature. This will detect the modified executable and replace it with the original.
+    *   **Steam's "Verify Integrity of Game Files":** The easiest method is to use Steam's built-in "Verify integrity of game files..." feature. This will detect the modified executable and replace it with the original. If you run the updater again afterwards (for example after a game patch), it saves this restored executable as the new `start_protected_game.exe.backup`, so the backup always matches your current game version.
     *   **Manual Restoration:** The script creates a backup of your original `start_protected_game.exe` named `start_protected_game.exe.backup` in your game's `Game` directory. You can manually restore it by:
         1.  Navigating to your Elden Ring `Game` directory (e.g., `~/.steam/steam/steamapps/common/ELDEN RING/Game`).
         2.  Deleting the current `start_protected_game.exe` (which is the mod launcher).
@@ -126,6 +126,9 @@ Here are some common issues you might encounter and how to resolve them:
 
 *   **Issue:** The script completes successfully, but the game launches vanilla or crashes.
 *   **Solution:**
+    *   **Update the game first.** Each Seamless Co-op release supports only one game version (for example, mod v2.0.1 requires game version 1.17). The script prints the release notes, which name the supported game version, and warns if Steam reports a pending update for Elden Ring. Let Steam finish updating, then run the script again.
+    *   Clear any Elden Ring launch options left over from a manual mod install (Steam > Elden Ring > Properties > General > Launch Options). This script does not need any.
+    *   Try a current Proton or GE-Proton version (Properties > Compatibility).
     *   Ensure you are launching the game directly from Steam.
     *   Verify that `start_protected_game.exe` in your game's `Game` directory is indeed the `ersc_launcher.exe` (check its size/date, or try running it directly if you have Wine installed).
     *   If you previously had other mods installed, they might be conflicting. Try a clean install of Elden Ring and then apply the Seamless Co-op mod using this script.
