@@ -28,6 +28,19 @@ readonly REPO_API_URL="https://api.github.com/repos/LukeYui/EldenRingSeamlessCoo
 readonly ELDEN_RING_APP_ID="1245620"
 # Created securely at runtime via mktemp (see main); populated before first use.
 TEMP_ZIP_PATH=""
+# Path (relative to the game dir) of the mod settings file and its backup.
+readonly SETTINGS_FILE="SeamlessCoop/ersc_settings.ini"
+readonly SETTINGS_BACKUP="ersc_settings.ini.backup"
+
+# Co-op password handling, set from command-line flags (see parse_args).
+#   prompt  - default: ask the user interactively
+#   migrate - keep the password from the existing installation, no prompt
+#   set     - use the password given with --password, no prompt
+#   skip    - leave the password untouched, no prompt
+PASSWORD_MODE="prompt"
+NEW_PASSWORD=""
+# Password found in the existing installation before the update (may be empty).
+EXISTING_PASSWORD=""
 
 # --- Helper Functions ---
 
@@ -46,6 +59,214 @@ die() {
     echo -e "\n[ERROR] $1" >&2
     echo "[FATAL] Script aborted." >&2
     exit 1
+}
+
+# Prints command-line usage.
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Updates the Elden Ring Seamless Co-op mod. With no options, you are asked
+whether to keep your existing co-op password or enter a new one.
+
+Options:
+  -m, --migrate-password   Keep the co-op password from your existing install
+                           without asking.
+  -p, --password PASSWORD  Set the co-op password to PASSWORD without asking.
+      --skip-password      Do not ask about or change the co-op password.
+  -h, --help               Show this help and exit.
+EOF
+}
+
+# Parses command-line arguments into the PASSWORD_MODE / NEW_PASSWORD globals.
+parse_args() {
+    while (( $# > 0 )); do
+        case "$1" in
+            -m|--migrate-password)
+                PASSWORD_MODE="migrate"
+                ;;
+            -p|--password)
+                (( $# >= 2 )) || die "Option '$1' requires a password argument."
+                PASSWORD_MODE="set"
+                NEW_PASSWORD="$2"
+                shift
+                ;;
+            --password=*)
+                PASSWORD_MODE="set"
+                NEW_PASSWORD="${1#*=}"
+                ;;
+            --skip-password)
+                PASSWORD_MODE="skip"
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                usage >&2
+                die "Unknown option: $1"
+                ;;
+        esac
+        shift
+    done
+
+    if [[ "$PASSWORD_MODE" == "set" ]]; then
+        validate_password "$NEW_PASSWORD" || die "Invalid password given with --password."
+    fi
+}
+
+# Returns success if the password can be safely written to the settings file.
+validate_password() {
+    local pw="$1"
+    if [[ -z "$pw" ]]; then
+        echo "The password cannot be empty." >&2
+        return 1
+    fi
+    if [[ "$pw" == *$'\n'* || "$pw" == *$'\r'* ]]; then
+        echo "The password cannot contain line breaks." >&2
+        return 1
+    fi
+    return 0
+}
+
+# Prints the co-op password stored in the given settings file (empty if none).
+read_password() {
+    local file="$1"
+    [[ -f "$file" ]] || return 0
+    # Match 'cooppassword = value', tolerating spaces and Windows line endings.
+    sed -nE 's/^[[:space:]]*cooppassword[[:space:]]*=[[:space:]]?(.*)$/\1/p' "$file" \
+        | tr -d '\r' | head -n 1
+}
+
+# Writes the co-op password into the given settings file, preserving the rest of
+# the file (including Windows line endings). Adds the key if it is missing.
+write_password() {
+    local file="$1" pw="$2" tmp
+    [[ -f "$file" ]] || return 0
+    tmp="$(mktemp "${file}.XXXXXX")" || die "Failed to create a temporary file next to '$file'."
+    local has_key=0
+    grep -qE '^[[:space:]]*cooppassword[[:space:]]*=' "$file" && has_key=1
+    # The password is passed through the environment so no characters in it need
+    # escaping (awk -v would interpret backslashes).
+    if ! ERSC_PW="$pw" awk -v has_key="$has_key" '
+        BEGIN { pw = ENVIRON["ERSC_PW"]; done = 0; eol = "" }
+        {
+            cr = (sub(/\r$/, "") ? "\r" : "")
+            if (NR == 1) eol = cr
+            if (!done && has_key && $0 ~ /^[[:space:]]*cooppassword[[:space:]]*=/) {
+                print "cooppassword = " pw cr; done = 1; next
+            }
+            print $0 cr
+            # Key missing: insert it directly under the [PASSWORD] section header.
+            if (!done && !has_key && $0 ~ /^[[:space:]]*\[PASSWORD\][[:space:]]*$/) {
+                print "cooppassword = " pw cr; done = 1
+            }
+        }
+        END {
+            # Neither the key nor the section exists: append both.
+            if (!done) {
+                print "[PASSWORD]" eol
+                print "cooppassword = " pw eol
+            }
+        }' "$file" > "$tmp"; then
+        rm -f "$tmp"
+        die "Failed to update the password in '$file'."
+    fi
+    # Keep the original file permissions, then replace it atomically.
+    chmod --reference="$file" "$tmp" 2>/dev/null || true
+    mv "$tmp" "$file" || { rm -f "$tmp"; die "Failed to update the password in '$file'."; }
+}
+
+# Remembers the password from the existing installation, before the new mod
+# files overwrite the settings. Prefers the live settings file over the backup.
+capture_existing_password() {
+    EXISTING_PASSWORD="$(read_password "$SETTINGS_FILE")"
+    if [[ -z "$EXISTING_PASSWORD" ]]; then
+        EXISTING_PASSWORD="$(read_password "$SETTINGS_BACKUP")"
+    fi
+}
+
+# Asks the user for a new password until a valid one is entered or the input is
+# left empty. Prints the password on stdout (empty means "don't change").
+prompt_new_password() {
+    local pw
+    while true; do
+        read -rp "Enter a co-op password (leave empty to keep the current setting): " pw
+        [[ -z "$pw" ]] && return 0
+        if validate_password "$pw"; then
+            printf '%s\n' "$pw"
+            return 0
+        fi
+    done
+}
+
+# Decides which co-op password to use (from flags, or by asking the user) and
+# writes it into the installed settings file and its backup.
+configure_password() {
+    [[ "$PASSWORD_MODE" == "skip" ]] && return 0
+    log_info "Configuring co-op password..."
+
+    if [[ ! -f "$SETTINGS_FILE" ]]; then
+        log_warn "'$SETTINGS_FILE' not found. Skipping password setup."
+        return 0
+    fi
+
+    local current chosen=""
+    current="$(read_password "$SETTINGS_FILE")"
+
+    case "$PASSWORD_MODE" in
+        set)
+            chosen="$NEW_PASSWORD"
+            ;;
+        migrate)
+            if [[ -z "$EXISTING_PASSWORD" ]]; then
+                log_warn "No password found in the existing installation. Leaving the password unchanged."
+                return 0
+            fi
+            chosen="$EXISTING_PASSWORD"
+            ;;
+        prompt)
+            # Never block automated / piped runs waiting for input.
+            if [[ ! -t 0 ]]; then
+                log_info "Not running interactively. Leaving the password unchanged."
+                return 0
+            fi
+            if [[ -n "$EXISTING_PASSWORD" ]]; then
+                echo "Your existing installation uses the co-op password: $EXISTING_PASSWORD" >&2
+                local yn
+                while true; do
+                    read -rp "Use the same password for multiplayer? (y/n) " yn
+                    case "$yn" in
+                        [Yy]*) chosen="$EXISTING_PASSWORD"; break ;;
+                        [Nn]*) chosen="$(prompt_new_password)"; break ;;
+                        *) echo "Please answer yes (y) or no (n)." >&2 ;;
+                    esac
+                done
+            else
+                echo "No co-op password is set. Everyone you play with must use the same password." >&2
+                chosen="$(prompt_new_password)"
+            fi
+            ;;
+    esac
+
+    if [[ -z "$chosen" ]]; then
+        log_info "Leaving the password unchanged."
+        return 0
+    fi
+
+    if [[ "$chosen" == "$current" ]]; then
+        log_info "Password already set. No change needed."
+    else
+        write_password "$SETTINGS_FILE" "$chosen"
+        log_info "Password saved to '$SETTINGS_FILE'."
+    fi
+
+    # Keep the backup in sync so the next run doesn't report a settings difference
+    # caused only by the password.
+    if [[ -f "$SETTINGS_BACKUP" && "$(read_password "$SETTINGS_BACKUP")" != "$chosen" ]]; then
+        write_password "$SETTINGS_BACKUP" "$chosen"
+        log_info "Password also updated in '$SETTINGS_BACKUP'."
+    fi
 }
 
 # --- Core Functions ---
@@ -367,6 +588,8 @@ cleanup() {
 # --- Main Execution ---
 
 main() {
+    parse_args "$@"
+
     clear || true
     echo "--- Elden Ring Seamless Co-op Updater for Linux ---"
 
@@ -390,7 +613,8 @@ main() {
 
     download_latest_release
 
-    # This must be done BEFORE unzipping, as unzip will overwrite the current settings.
+    # These must be done BEFORE unzipping, as unzip will overwrite the current settings.
+    capture_existing_password
     manage_settings_backup
 
     install_mod_files
@@ -400,6 +624,9 @@ main() {
 
     # This must be done AFTER the new mod files are in place.
     restore_settings
+
+    # This must be done AFTER settings are restored, so the password isn't overwritten.
+    configure_password
 
     # Temp file is removed automatically by the EXIT trap (see cleanup).
 

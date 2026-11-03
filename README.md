@@ -10,6 +10,7 @@ This script automates the process of updating the [Elden Ring Seamless Co-op mod
 *   **Automatic Detection:** Finds your Elden Ring installation across every Steam library — native or Flatpak, including custom library folders on secondary drives (parsed from Steam's `libraryfolders.vdf`). If more than one install is found, it lets you choose.
 *   **Latest Release Download:** Automatically fetches the most recent `Seamless.Co-op.*.zip` release from the official GitHub repository.
 *   **Settings Backup:** Preserves your `ersc_settings.ini` file, prompting you if changes are detected.
+*   **Co-op Password Setup:** Asks for your co-op password, or offers to reuse the password from your existing install so you stay in sync with the friends you play with. This can also be done without prompts using command-line flags.
 *   **Executable Management:** Backs up the original game executable and replaces it with the mod's launcher.
 *   **Clean-up:** Removes temporary download files after a successful update.
 
@@ -75,6 +76,34 @@ Run this script and you will not have to change steam options. Just run the game
 ```
 
 The script will guide you through the update process with on-screen messages.
+
+#### Co-op Password
+
+Players can only join each other when they use the same co-op password (the `cooppassword` setting in `SeamlessCoop/ersc_settings.ini`). When you run the script with no options, it will:
+
+*   If your existing install has a password: show it and ask whether to use the same password for multiplayer. Answer `n` to enter a new one.
+*   If no password is set: ask you to enter one. Leave it empty to keep the current setting.
+
+You can skip the prompt with these options:
+
+| Option | Description |
+| --- | --- |
+| `-m`, `--migrate-password` | Keep the password from your existing install without asking. |
+| `-p`, `--password PASSWORD` | Set the password to `PASSWORD` without asking. |
+| `--skip-password` | Don't ask about or change the password. |
+| `-h`, `--help` | Show usage information. |
+
+For example:
+
+```bash
+./ersc-update.sh --migrate-password
+```
+
+```bash
+./ersc-update.sh --password "my secret password"
+```
+
+The password is written to both `SeamlessCoop/ersc_settings.ini` and your settings backup (`ersc_settings.ini.backup`), so it carries over to future updates. If the script is not run from an interactive terminal and no option is given, the password is left unchanged.
 
 ## Important Notes & Restoration
 
