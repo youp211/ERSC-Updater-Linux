@@ -10,7 +10,7 @@
 # backs up existing mod settings, and installs the new files.
 #
 # Author: youp211
-# Version: 2.3
+# Version: 2.4
 # ==============================================================================
 
 # --- Script Configuration ---
